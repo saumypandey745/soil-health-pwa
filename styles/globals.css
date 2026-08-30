@@ -1,0 +1,62 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Roboto, sans-serif;
+  background: #f0fdf4;
+  color: #14532d;
+}
+.container {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 16px;
+  min-height: 100vh;
+}
+.btn {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  font-size: 18px;
+  font-weight: 600;
+  border-radius: 12px;
+  border: none;
+  margin-top: 12px;
+  cursor: pointer;
+}
+.btn-primary { background: #166534; color: white; }
+.btn-secondary { background: #e5e7eb; color: #111827; }
+.input-group { margin-bottom: 14px; }
+.input-group label { display: block; margin-bottom: 6px; font-size: 16px; font-weight: 600; }
+.input-group input, select {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  border-radius: 10px;
+  border: 1px solid #86efac;
+}
+.card {
+  padding: 16px;
+  border-radius: 14px;
+  margin-bottom: 12px;
+  font-size: 16px;
+}
+.card-green { background: #dcfce7; border: 2px solid #16a34a; }
+.card-yellow { background: #fef9c3; border: 2px solid #ca8a04; }
+.card-red { background: #fee2e2; border: 2px solid #dc2626; }
+.lang-switch { display: flex; gap: 8px; justify-content: flex-end; margin-bottom: 8px; }
+.lang-switch button {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #166534;
+  background: white;
+  font-size: 14px;
+}
+.camera-box {
+  width: 100%;
+  aspect-ratio: 3/4;
+  background: #111;
+  border-radius: 14px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 12px;
+}
+.camera-box video, .camera-box img { width: 100%; height: 100%; object-fit: cover; }

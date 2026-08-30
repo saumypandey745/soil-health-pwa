@@ -1,0 +1,21 @@
+{
+  "appTitle": "ಮಣ್ಣಿನ ಆರೋಗ್ಯ ಸಲಹೆಗಾರ",
+  "capturePhoto": "ಮಣ್ಣಿನ ಫೋಟೋ ತೆಗೆಯಿರಿ",
+  "retake": "ಮತ್ತೆ ಫೋಟೋ ತೆಗೆಯಿರಿ",
+  "next": "ಮುಂದೆ",
+  "back": "ಹಿಂದೆ",
+  "nitrogen": "ಸಾರಜನಕ (N)",
+  "phosphorus": "ರಂಜಕ (P)",
+  "potassium": "ಪೊಟ್ಯಾಶಿಯಂ (K)",
+  "ph": "ಮಣ್ಣಿನ pH",
+  "analyze": "ಮಣ್ಣನ್ನು ವಿಶ್ಲೇಷಿಸಿ",
+  "soilHealthScore": "ಮಣ್ಣಿನ ಆರೋಗ್ಯ ಅಂಕ",
+  "deficiencyDiagnosis": "ಕೊರತೆ ರೋಗನಿರ್ಣಯ",
+  "recommendedCrops": "ಶಿಫಾರಸು ಮಾಡಿದ ಬೆಳೆಗಳು",
+  "listenResults": "ಫಲಿತಾಂಶಗಳನ್ನು ಆಲಿಸಿ",
+  "downloadReport": "PDF ವರದಿ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ",
+  "startOver": "ಮತ್ತೆ ಪ್ರಾರಂಭಿಸಿ",
+  "healthy": "ಆರೋಗ್ಯಕರ",
+  "moderateDeficiency": "ಮಧ್ಯಮ ಕೊರತೆ",
+  "severeDeficiency": "ತೀವ್ರ ಕೊರತೆ"
+}

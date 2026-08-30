@@ -1,0 +1,21 @@
+{
+  "appTitle": "Soil Health Advisor",
+  "capturePhoto": "Capture Soil Photo",
+  "retake": "Retake Photo",
+  "next": "Next",
+  "back": "Back",
+  "nitrogen": "Nitrogen (N)",
+  "phosphorus": "Phosphorus (P)",
+  "potassium": "Potassium (K)",
+  "ph": "Soil pH",
+  "analyze": "Analyze Soil",
+  "soilHealthScore": "Soil Health Score",
+  "deficiencyDiagnosis": "Deficiency Diagnosis",
+  "recommendedCrops": "Recommended Crops",
+  "listenResults": "Listen to Results",
+  "downloadReport": "Download PDF Report",
+  "startOver": "Start Over",
+  "healthy": "Healthy",
+  "moderateDeficiency": "Moderate Deficiency",
+  "severeDeficiency": "Severe Deficiency"
+}

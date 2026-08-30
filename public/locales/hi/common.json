@@ -1,0 +1,21 @@
+{
+  "appTitle": "मृदा स्वास्थ्य सलाहकार",
+  "capturePhoto": "मिट्टी की फोटो लें",
+  "retake": "दोबारा फोटो लें",
+  "next": "आगे",
+  "back": "पीछे",
+  "nitrogen": "नाइट्रोजन (N)",
+  "phosphorus": "फॉस्फोरस (P)",
+  "potassium": "पोटैशियम (K)",
+  "ph": "मिट्टी का पीएच",
+  "analyze": "मिट्टी की जांच करें",
+  "soilHealthScore": "मृदा स्वास्थ्य स्कोर",
+  "deficiencyDiagnosis": "कमी का निदान",
+  "recommendedCrops": "अनुशंसित फसलें",
+  "listenResults": "परिणाम सुनें",
+  "downloadReport": "पीडीएफ रिपोर्ट डाउनलोड करें",
+  "startOver": "फिर से शुरू करें",
+  "healthy": "स्वस्थ",
+  "moderateDeficiency": "मध्यम कमी",
+  "severeDeficiency": "गंभीर कमी"
+}
