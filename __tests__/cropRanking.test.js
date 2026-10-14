@@ -80,7 +80,7 @@ describe('Phase 2 - Context-Aware Crop Ranking Engine (lib/cropRanking.js)', () 
       });
 
       const pulses = ranked.find((c) => c.name === 'Pulses (Dal)');
-      expect(pulses.reasons.some((r) => r.includes('Beneficial rotation choice following Rice'))).toBe(true);
+      expect(pulses.reasons.some((r) => r.includes('Beneficial rotation choice following Rice (supports balanced soil health & diversity)'))).toBe(true);
     });
 
     test('adds monocropping consideration when current candidate matches previous crop', () => {

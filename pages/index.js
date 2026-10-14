@@ -164,12 +164,12 @@ export default function Home() {
                     <span className="history-date">
                       {new Date(h.timestamp).toLocaleDateString()} {new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
-                    <span className={`status-pill pill-${h.result.overall}`}>
-                      {h.result.score}/100 {h.result.soilClassification?.healthGrade ? `(${h.result.soilClassification.healthGrade})` : ''}
+                    <span className={`status-pill pill-${h.result?.overall || 'healthy'}`}>
+                      {h.result?.score ?? 0}/100 {h.result?.soilClassification?.healthGrade ? `(${h.result.soilClassification.healthGrade})` : ''}
                     </span>
                   </div>
                   <div className="history-item-details">
-                    N: {h.inputs.n} | P: {h.inputs.p} | K: {h.inputs.k} | pH: {h.inputs.ph}
+                    N: {h.inputs?.n ?? '-'} | P: {h.inputs?.p ?? '-'} | K: {h.inputs?.k ?? '-'} | pH: {h.inputs?.ph ?? '-'}
                     {h.context?.season && ` • ${t(h.context.season)}`}
                   </div>
                 </div>

@@ -87,6 +87,21 @@ describe('Phase 2 - Farm Context Engine (lib/farmContext.js)', () => {
       expect(ctx.hasContext).toBe(true);
     });
 
+    test('truncates location fields to a maximum of 50 characters', () => {
+      const veryLongString = 'A'.repeat(80);
+      const ctx = buildFarmContext({
+        location: {
+          state: veryLongString,
+          district: veryLongString,
+          village: veryLongString,
+        },
+      });
+
+      expect(ctx.location.state).toHaveLength(50);
+      expect(ctx.location.district).toHaveLength(50);
+      expect(ctx.location.village).toHaveLength(50);
+    });
+
     test('normalizes crop preference and history strings', () => {
       const ctx = buildFarmContext({
         preferredCrop: '  Wheat  ',
@@ -101,3 +116,4 @@ describe('Phase 2 - Farm Context Engine (lib/farmContext.js)', () => {
     });
   });
 });
+
