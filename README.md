@@ -23,14 +23,12 @@ npm run start
 Copy `.env.local.example` to `.env.local` and fill in:
 
 ```
-SARVAM_API_KEY=your_key_here            # used server-side in pages/api/tts.js
-NEXT_PUBLIC_SARVAM_API_KEY=your_key_here # used client-side to decide whether to call Sarvam or fallback
+SARVAM_API_KEY=your_key_here            # server-side only in pages/api/tts.js
 ```
 
-**No Sarvam key yet?** The app still works. `lib/sarvam.js` automatically falls
-back to the browser's built-in `SpeechSynthesis` API, so the "Listen to Results"
-voice feature is fully demoable without any key. Add the real key later and it
-switches to Sarvam AI automatically — no code change needed.
+> **Note for Netlify Deployment**: The key is server-side only. On Netlify, `SARVAM_API_KEY` must be set under **Site settings > Environment variables**, followed by a redeploy.
+
+**No Sarvam key yet?** The app still works. The client always calls `/api/tts`, and if Sarvam is unavailable or the key is not configured, it gracefully falls back to the browser's built-in `SpeechSynthesis` API. The "Listen to Results" voice feature is fully demoable without any key. Add the real key later and it switches to Sarvam AI automatically — no client code change needed.
 
 ## 3. Key Implementation Decisions
 
@@ -51,9 +49,10 @@ switches to Sarvam AI automatically — no code change needed.
   small crop-compatibility lookup table, so it's easy to swap in a real ML
   model later (e.g., call the FastAPI `/analyze` endpoint from the earlier
   Milestone 3 deliverable instead of the local heuristic).
-- **Voice (Sarvam AI)**: server route (`pages/api/tts.js`) keeps the API key
-  off the client. Client wrapper (`lib/sarvam.js`) gracefully degrades to
-  on-device `SpeechSynthesis` when no key is configured.
+- **Voice (Sarvam AI)**: Server-side route (`pages/api/tts.js`) keeps the API key
+  strictly off the client. The client wrapper (`lib/sarvam.js`) always calls `/api/tts`
+  and falls back to browser `SpeechSynthesis` when Sarvam is unavailable or unconfigured.
+  On Netlify, set `SARVAM_API_KEY` under Site settings > Environment variables, followed by a redeploy.
 - **PDF report**: generated fully client-side with `jsPDF` (no server round
   trip needed), so it works even offline once the app shell is cached.
 - **Low-end device performance**: no UI framework/heavy CSS library; plain

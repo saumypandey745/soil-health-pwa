@@ -1,44 +1,80 @@
-// Server-side route: real Sarvam AI key ko client se hide rakhta hai.
-// Jab SARVAM_API_KEY set hoga, ye actual Sarvam TTS API ko call karega.
+const LANG_MAP = {
+  en: 'en-IN',
+  hi: 'hi-IN',
+  kn: 'kn-IN',
+};
+
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).end();
+  if (req.method !== 'POST') {
+    return res.status(405).end();
+  }
 
   const apiKey = process.env.SARVAM_API_KEY;
   if (!apiKey) {
-    return res.status(400).json({ error: 'SARVAM_API_KEY not configured on server' });
+    return res.status(400).json({ error: 'SARVAM_API_KEY not configured' });
   }
 
-  const { text, target_language_code } = req.body;
+  let body = req.body;
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch {
+      return res.status(400).json({ error: 'Invalid JSON body' });
+    }
+  }
+  body = body || {};
+
+  const { text, lang } = body;
+
+  if (!text || typeof text !== 'string' || text.trim().length === 0) {
+    return res.status(400).json({ error: 'Missing or empty text' });
+  }
+
+  const languageCode = LANG_MAP[lang];
+  if (!languageCode) {
+    return res.status(400).json({ error: 'Unsupported language' });
+  }
+
+  const truncatedText = text.slice(0, 2500);
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, 10000);
 
   try {
-    // NOTE: Sarvam AI TTS endpoint/payload — confirm exact fields from Sarvam docs when key is available.
     const sarvamRes = await fetch('https://api.sarvam.ai/text-to-speech', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'API-Subscription-Key': apiKey,
+        'api-subscription-key': apiKey,
       },
       body: JSON.stringify({
-        inputs: [text],
-        target_language_code,
-        speaker: 'meera',
-        model: 'bulbul:v1',
+        text: truncatedText,
+        language_code: languageCode,
+        model: 'bulbul:v3',
+        speaker: 'shubh',
       }),
+      signal: controller.signal,
     });
 
+    clearTimeout(timeoutId);
+
     if (!sarvamRes.ok) {
-      const errText = await sarvamRes.text();
-      return res.status(502).json({ error: 'Sarvam AI request failed', details: errText });
+      return res.status(502).json({ error: 'Sarvam AI request failed' });
     }
 
     const data = await sarvamRes.json();
-    // Sarvam returns base64 audio in `audios[0]` per their docs
-    const audioBase64 = data.audios?.[0];
-    const audioBuffer = Buffer.from(audioBase64, 'base64');
+    const audios = data?.audios;
+    if (!audios || !Array.isArray(audios) || audios.length === 0) {
+      return res.status(502).json({ error: 'Sarvam AI request failed' });
+    }
 
+    const audioBuffer = Buffer.from(audios.join(''), 'base64');
     res.setHeader('Content-Type', 'audio/wav');
-    res.send(audioBuffer);
+    return res.status(200).send(audioBuffer);
   } catch (err) {
-    res.status(500).json({ error: 'TTS generation failed', details: err.message });
+    clearTimeout(timeoutId);
+    return res.status(500).json({ error: 'TTS generation failed' });
   }
 }
