@@ -6,7 +6,7 @@ This document describes the automated test suite for the Soil Health PWA backend
 
 ## 1. Overview & What is Tested
 
-The test suite covers 4 key areas across **52 individual unit and integration tests**:
+The test suite covers 7 key areas across **80 individual unit and integration tests**:
 
 1. **`lib/soilLogic.js` (`__tests__/soilLogic.test.js`) — 16 Tests**:
    - Baseline agronomic calculation logic (`analyzeSoil`).
@@ -26,13 +26,35 @@ The test suite covers 4 key areas across **52 individual unit and integration te
    - Positive soil strengths detection for healthy parameters.
    - Structured farmer action summaries (`priority`, `urgent`, `longTerm`).
 
-3. **`pages/api/analyze.js` (`__tests__/api.analyze.test.js`) — 8 Tests**:
+3. **`lib/farmContext.js` (`__tests__/farmContext.test.js`) — 8 Tests (Phase 2)**:
+   - Input sanitization and defaults handling (null, undefined, non-objects).
+   - Case-insensitive season normalization with whitespace trimming (`kharif`, `rabi`, `zaid`).
+   - Water availability normalization (`rainfed`, `limited`, `reliable`).
+   - Location parsing (state, district, village) and `hasContext` flag determination.
+   - Crop preference, current crop, and rotation history sanitization.
+
+4. **`lib/cropRanking.js` (`__tests__/cropRanking.test.js`) — 6 Tests (Phase 2)**:
+   - Water availability modifiers (drought-hardy crops boosted under rainfed, water-intensive crops penalized under rainfed / boosted under reliable irrigation).
+   - Season compatibility modifiers (in-season sowing windows boosted, out-of-season flagged with considerations).
+   - Farmer preferred crop detection and suitability boosting.
+   - Legume rotation bonuses following cereal crops and monocropping cautions.
+   - Multi-metric crop comparison matrix generation (`buildCropComparison`).
+
+5. **`lib/historyLogic.js` (`__tests__/historyLogic.test.js`) — 6 Tests (Phase 2)**:
+   - Safe fallback when no prior test record exists.
+   - Soil health score delta computation and trend categorization (`improving`, `needs_attention`, `stable`).
+   - Individual nutrient delta calculations with directional indicators (`up`, `down`, `same`).
+   - Backward compatibility with legacy history records lacking Phase 1/Phase 2 schema fields.
+
+6. **`pages/api/analyze.js` (`__tests__/api.analyze.test.js`) — 11 Tests**:
    - HTTP method validation (POST allowed; GET/PUT rejected with 405).
    - Request body validation (empty body, missing fields, non-numeric values returning 400).
    - Type coercion (numeric string inputs coerced cleanly to numbers).
    - Extreme large values handling returning valid 200 responses.
+   - Farm context support (optional `context` object processed returning `farmContext` and `cropComparison`).
+   - Stringified JSON body support and malformed JSON error handling.
 
-4. **`pages/api/tts.js` (`__tests__/api.tts.test.js`) — 8 Tests**:
+7. **`pages/api/tts.js` (`__tests__/api.tts.test.js`) — 8 Tests**:
    - Method enforcement (POST allowed; GET rejected with 405).
    - Environment variable validation (`SARVAM_API_KEY` presence check returning 400 if unconfigured).
    - Request payload validation (missing/empty text, unsupported language codes returning 400).
@@ -127,6 +149,9 @@ npx jest --coverage
 | 6 | Empty body | `POST /api/analyze` with `{}` | Status 400 with `{ error: 'Invalid NPK/pH values' }` |
 | 7 | Coerce numeric strings | `POST /api/analyze` with `{ n: '300', p: '20', ... }` | Status 200, parsed as numbers, valid analysis returned |
 | 8 | Extreme large values | `POST /api/analyze` with large values | Status 200 with valid analysis returned |
+| 9 | Optional context integration | `POST /api/analyze` with `context` object | Status 200, returns `farmContext` and `cropComparison` array |
+| 10 | Stringified JSON body support | `POST /api/analyze` with JSON string payload | Status 200, parsed safely |
+| 11 | Malformed JSON string | `POST /api/analyze` with malformed JSON string | Status 400 with `{ error: 'Invalid JSON body' }` |
 
 ### Suite 4: `__tests__/api.tts.test.js`
 
@@ -140,3 +165,39 @@ npx jest --coverage
 | 6 | Network error / rejection | Mock fetch throws error | Status 500 with `{ error: 'TTS generation failed' }` |
 | 7 | Successful TTS generation | Mock 200 with base64 audio | Status 200, `Content-Type: audio/wav`, decoded bytes returned; fetch called with `https://api.sarvam.ai/text-to-speech`, header `'api-subscription-key'`, body containing `text`, `language_code: 'hi-IN'`, `model: 'bulbul:v3'`, `speaker: 'shubh'` |
 | 8 | Truncation > 2500 characters | Payload text of 3,600 characters | Status 200, fetch called with payload text truncated to exactly 2,500 characters |
+
+### Suite 5: `__tests__/farmContext.test.js` (Phase 2 Farm Context Engine)
+
+| # | Test Case Description | Input / Function | Expected Result |
+|---|------------------------|------------------|-----------------|
+| 1 | Safe defaults on empty call | `buildFarmContext()` | Returns default structure, `hasContext: false` |
+| 2 | Resilient to null/primitives | `buildFarmContext(null / 12345 / 'string')` | Returns default structure without throwing |
+| 3 | Case-insensitive season parsing | `buildFarmContext({ season: '  RABI  ' })` | Normalizes to `'rabi'` |
+| 4 | Discard invalid season | `buildFarmContext({ season: 'summer' })` | Normalizes to `''` |
+| 5 | Water availability variations | `buildFarmContext({ waterAvailability: 'Rain-Fed' })` | Normalizes to `'rainfed'` |
+| 6 | Reliable irrigation normalization | `buildFarmContext({ waterAvailability: 'assured' })` | Normalizes to `'reliable'` |
+| 7 | Trimmed location parsing | `buildFarmContext({ location: { state: '  Karnataka  ', ... } })` | Strips whitespace, `hasContext: true` |
+| 8 | Crop preference & rotation strings | `buildFarmContext({ preferredCrop: '  Wheat  ', ... })` | Strips whitespace, stores sanitized strings |
+
+### Suite 6: `__tests__/cropRanking.test.js` (Phase 2 Crop Ranking)
+
+| # | Test Case Description | Input / Function | Expected Result |
+|---|------------------------|------------------|-----------------|
+| 1 | Rainfed water sensitivity | `rankCropsWithContext({ waterAvailability: 'rainfed' })` | Millets boosted (`waterFit: 'High'`), Rice penalized (`waterFit: 'Low'`) |
+| 2 | Reliable irrigation support | `rankCropsWithContext({ waterAvailability: 'reliable' })` | Rice receives irrigation reason and high water fit |
+| 3 | Season compatibility | `rankCropsWithContext({ season: 'kharif' })` | Rice (Kharif) fit 'High', Wheat (Rabi) flagged with caution |
+| 4 | Preferred crop boost | `rankCropsWithContext({ preferredCrop: 'Wheat' })` | Wheat marked `isPreferred: true` with boost |
+| 5 | Legume crop rotation bonus | `rankCropsWithContext({ previousCrop: 'Rice' })` | Pulses (Dal) receives rotation benefit explanation |
+| 6 | Comparison matrix generation | `buildCropComparison(ranked)` | Returns top 4 crops with 3-dimensional fit tags and pros/cons |
+
+### Suite 7: `__tests__/historyLogic.test.js` (Phase 2 Soil Trend Engine)
+
+| # | Test Case Description | Input / Function | Expected Result |
+|---|------------------------|------------------|-----------------|
+| 1 | First recorded test fallback | `calculateSoilTrend(current, null)` | `hasComparison: false`, status `'stable'`, informative summary |
+| 2 | Empty objects resilience | `calculateSoilTrend({}, {})` | Computes safely without throwing |
+| 3 | Improving soil health trend | Score change > +3 | Status `'improving'`, positive delta and summary |
+| 4 | Needs attention soil health trend | Score change < -3 | Status `'needs_attention'`, negative delta and alert summary |
+| 5 | Stable soil health trend | Score change between -3 and +3 | Status `'stable'`, consistent summary |
+| 6 | Nutrient delta calculations | N/P/K/pH changes | Accurately calculates delta values and directions (`up`, `down`, `same`) |
+

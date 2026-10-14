@@ -4,16 +4,19 @@ import { useTranslation } from 'next-i18next';
 import { serverSideTranslations } from 'next-i18next/serverSideTranslations';
 import PhotoCapture from '../components/PhotoCapture';
 import SoilForm from '../components/SoilForm';
+import FarmContextForm from '../components/FarmContextForm';
 import ResultsCard from '../components/ResultsCard';
 import { analyzeSoil } from '../lib/soilLogic';
 
 export default function Home() {
   const { t } = useTranslation('common');
   const router = useRouter();
-  const [step, setStep] = useState('capture'); // capture -> form -> results
+  const [step, setStep] = useState('capture'); // capture -> form -> context -> results
   const [photo, setPhoto] = useState(null);
   const [inputs, setInputs] = useState(null);
+  const [farmContext, setFarmContext] = useState({});
   const [result, setResult] = useState(null);
+  const [previousRecord, setPreviousRecord] = useState(null);
   const [history, setHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
 
@@ -41,15 +44,26 @@ export default function Home() {
       ph: Number(values.ph),
     };
     setInputs(parsed);
-    const analysis = analyzeSoil(parsed);
+    // Move to optional farm context step
+    setStep('context');
+  }
+
+  function runAnalysisWithContext(contextData = {}) {
+    setFarmContext(contextData);
+    const analysis = analyzeSoil(inputs, contextData);
     setResult(analysis);
+
+    // Reference the most recent prior test for trend comparison
+    const priorTest = history[0] || null;
+    setPreviousRecord(priorTest);
 
     // Save to local history
     try {
       const newEntry = {
         id: Date.now().toString(),
         timestamp: new Date().toISOString(),
-        inputs: parsed,
+        inputs,
+        context: contextData,
         result: analysis,
         photoThumbnail: photo ? photo.slice(0, 100) : null,
       };
@@ -71,13 +85,22 @@ export default function Home() {
     setStep('capture');
     setPhoto(null);
     setInputs(null);
+    setFarmContext({});
     setResult(null);
+    setPreviousRecord(null);
     setShowHistory(false);
   }
 
   function loadHistoryItem(item) {
     setInputs(item.inputs);
+    setFarmContext(item.context || {});
     setResult(item.result);
+
+    // Find the next older test relative to this item for comparison
+    const idx = history.findIndex((h) => h.id === item.id);
+    const prior = idx >= 0 && idx + 1 < history.length ? history[idx + 1] : null;
+    setPreviousRecord(prior);
+
     setStep('results');
     setShowHistory(false);
   }
@@ -86,6 +109,7 @@ export default function Home() {
     try {
       localStorage.removeItem('soil_health_history');
       setHistory([]);
+      setPreviousRecord(null);
     } catch {
       // Storage clear fallback
     }
@@ -95,7 +119,7 @@ export default function Home() {
     <div className="container">
       <header className="app-header">
         <div className="header-top">
-          <span className="logo-badge">🌱 AgriTech</span>
+          <span className="logo-badge">🌱 AgriTech 2.0</span>
           <div className="lang-switch">
             <button
               className={router.locale === 'en' ? 'active-lang' : ''}
@@ -123,7 +147,7 @@ export default function Home() {
         <h1 className="main-title">{t('appTitle')}</h1>
       </header>
 
-      {/* History Drawer Modal / Section */}
+      {/* History Drawer Modal */}
       {showHistory && (
         <div className="history-modal card card-clean">
           <div className="history-header">
@@ -146,6 +170,7 @@ export default function Home() {
                   </div>
                   <div className="history-item-details">
                     N: {h.inputs.n} | P: {h.inputs.p} | K: {h.inputs.k} | pH: {h.inputs.ph}
+                    {h.context?.season && ` • ${t(h.context.season)}`}
                   </div>
                 </div>
               ))}
@@ -157,6 +182,7 @@ export default function Home() {
         </div>
       )}
 
+      {/* Step 1: Soil Photo Capture */}
       {step === 'capture' && !showHistory && (
         <>
           <PhotoCapture onCapture={handlePhoto} />
@@ -171,6 +197,7 @@ export default function Home() {
         </>
       )}
 
+      {/* Step 2: Soil NPK/pH Form */}
       {step === 'form' && (
         <>
           <SoilForm onSubmit={handleFormSubmit} />
@@ -180,9 +207,26 @@ export default function Home() {
         </>
       )}
 
+      {/* Step 3: Optional Farm Context Form (Phase 2) */}
+      {step === 'context' && (
+        <FarmContextForm
+          initialValues={farmContext}
+          onSubmit={runAnalysisWithContext}
+          onSkip={() => runAnalysisWithContext({})}
+          onBack={() => setStep('form')}
+        />
+      )}
+
+      {/* Step 4: Results Dashboard */}
       {step === 'results' && result && (
         <>
-          <ResultsCard result={result} inputs={inputs} photo={photo} lang={router.locale} />
+          <ResultsCard
+            result={result}
+            inputs={inputs}
+            photo={photo}
+            lang={router.locale}
+            previousRecord={previousRecord}
+          />
           <button className="btn btn-secondary" onClick={startOver}>
             {t('startOver')}
           </button>

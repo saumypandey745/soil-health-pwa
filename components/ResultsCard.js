@@ -2,31 +2,33 @@ import { useState } from 'react';
 import { useTranslation } from 'next-i18next';
 import { speakText } from '../lib/sarvam';
 import { generateSoilReport } from '../lib/pdfReport';
+import { calculateSoilTrend } from '../lib/historyLogic';
 
 const CARD_CLASS = { healthy: 'card-green', moderate: 'card-yellow', severe: 'card-red' };
 const STATUS_KEY = { healthy: 'healthy', moderate: 'moderateDeficiency', severe: 'severeDeficiency' };
 const GRADE_CLASS = { A: 'grade-a', B: 'grade-b', C: 'grade-c', D: 'grade-d', E: 'grade-e' };
+const FIT_CLASS = { High: 'fit-high', Medium: 'fit-medium', Moderate: 'fit-medium', Low: 'fit-low', 'N/A': 'fit-na' };
 
-export default function ResultsCard({ result, inputs, photo, lang }) {
+export default function ResultsCard({ result, inputs, photo, lang, previousRecord = null }) {
   const { t } = useTranslation('common');
   const [selectedSeason, setSelectedSeason] = useState('all');
+
+  const trend = calculateSoilTrend({ result, inputs }, previousRecord);
 
   function handleListen() {
     const gradeText = result.soilClassification?.healthGrade ? `, ${t('healthGrade')} ${result.soilClassification.healthGrade}` : '';
     const limiting = result.soilClassification?.limitingFactor && result.soilClassification.limitingFactor !== 'None'
       ? `${t('limitingFactor')}: ${result.soilClassification.limitingFactor}. `
       : '';
+    const topCrop = result.cropRecommendations?.[0]?.name ? `${t('recommendedCrops')}: ${result.cropRecommendations[0].name}. ` : '';
     const urgentAdvice = result.farmerActionSummary?.urgent ? `${result.farmerActionSummary.urgent}. ` : '';
 
-    const summary = `${t('soilHealthScore')}: ${result.score} out of 100 (${t(STATUS_KEY[result.overall])}${gradeText}). ${limiting}${t('deficiencyDiagnosis')}: ${
-      result.deficiencies.length ? result.deficiencies.map((d) => `${d.nutrient} ${d.status}`).join(', ') : t('healthy')
-    }. ${t('recommendedCrops')}: ${result.recommendedCrops.join(', ')}. ${urgentAdvice}`;
-
+    const summary = `${t('soilHealthScore')}: ${result.score} out of 100 (${t(STATUS_KEY[result.overall])}${gradeText}). ${limiting}${topCrop}${urgentAdvice}`;
     speakText(summary, lang);
   }
 
   function handleDownload() {
-    generateSoilReport({ inputs, result, photoDataUrl: photo });
+    generateSoilReport({ inputs, result, photoDataUrl: photo, trendComparison: trend });
   }
 
   const nutrientsList = [
@@ -37,9 +39,13 @@ export default function ResultsCard({ result, inputs, photo, lang }) {
   ];
 
   const seasonalList = result.seasonalCrops || { kharif: [], rabi: [], zaid: [] };
+  const allCrops = result.cropRecommendations || result.recommendedCrops.map((name) => ({ name, suitability: 85, reasons: [] }));
   const filteredCrops = selectedSeason === 'all'
-    ? result.cropRecommendations || result.recommendedCrops.map(name => ({ name, suitability: 85, reasons: [] }))
-    : (result.cropRecommendations || []).filter(c => seasonalList[selectedSeason]?.includes(c.name));
+    ? allCrops
+    : allCrops.filter((c) => seasonalList[selectedSeason]?.includes(c.name));
+
+  const comparisonList = result.cropComparison || [];
+  const farmContext = result.farmContext || {};
 
   return (
     <div className="results-container">
@@ -81,7 +87,59 @@ export default function ResultsCard({ result, inputs, photo, lang }) {
         )}
       </div>
 
-      {/* 2. Nutrient Status Dashboard */}
+      {/* 2. Farm Context Summary (Phase 2) */}
+      {farmContext.hasContext && (
+        <div className="card card-clean context-badge-card">
+          <h4 className="card-subheading">🏡 {t('farmContextSummary')}</h4>
+          <div className="context-chips-row">
+            {farmContext.season && (
+              <span className="context-chip">🗓️ {t(farmContext.season)}</span>
+            )}
+            {farmContext.waterAvailability && (
+              <span className="context-chip">
+                {farmContext.waterAvailability === 'rainfed' ? '🌧️' : farmContext.waterAvailability === 'limited' ? '💧' : '🌊'}{' '}
+                {t(farmContext.waterAvailability === 'rainfed' ? 'waterRainfed' : farmContext.waterAvailability === 'limited' ? 'waterLimited' : 'waterReliable')}
+              </span>
+            )}
+            {farmContext.location?.district && (
+              <span className="context-chip">📍 {farmContext.location.district}{farmContext.location.state ? `, ${farmContext.location.state}` : ''}</span>
+            )}
+            {farmContext.preferredCrop && (
+              <span className="context-chip">⭐ {t('preferredCrop')}: {farmContext.preferredCrop}</span>
+            )}
+            {farmContext.previousCrop && (
+              <span className="context-chip">🔄 {t('previousCrop')}: {farmContext.previousCrop}</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 3. Soil Health Progress Trend (Phase 2) */}
+      {trend.hasComparison && (
+        <div className="card card-clean trend-card">
+          <div className="trend-header-row">
+            <h4 className="card-subheading">📈 {t('trendComparisonTitle')}</h4>
+            <span className={`status-pill pill-${trend.trendStatus === 'improving' ? 'healthy' : trend.trendStatus === 'needs_attention' ? 'severe' : 'moderate'}`}>
+              {t(trend.trendStatus === 'improving' ? 'improving' : trend.trendStatus === 'needs_attention' ? 'needsAttention' : 'stable')}
+            </span>
+          </div>
+          <div className="trend-stat-row">
+            <div className="trend-stat">
+              <span className="meta-label">{t('previousScore')}</span>
+              <strong>{trend.prevScore}/100</strong>
+            </div>
+            <div className="trend-stat">
+              <span className="meta-label">{t('scoreChange')}</span>
+              <strong className={trend.scoreDelta > 0 ? 'text-good' : trend.scoreDelta < 0 ? 'text-alert' : ''}>
+                {trend.scoreDelta > 0 ? `+${trend.scoreDelta}` : trend.scoreDelta}
+              </strong>
+            </div>
+          </div>
+          <p className="trend-explanation">{trend.trendSummary}</p>
+        </div>
+      )}
+
+      {/* 4. Nutrient Status Dashboard */}
       <div className="card card-clean">
         <h3 className="section-title">📊 {t('nutrientDashboard')}</h3>
         <div className="nutrient-grid">
@@ -105,9 +163,8 @@ export default function ResultsCard({ result, inputs, photo, lang }) {
         </div>
       </div>
 
-      {/* 3. Deficiencies & Soil Strengths */}
+      {/* 5. Deficiencies & Soil Strengths */}
       <div className="dual-card-row">
-        {/* Deficiencies */}
         <div className="card card-yellow card-half">
           <h4 className="card-subheading">⚠️ {t('deficiencyDiagnosis')}</h4>
           <ul className="bullet-list">
@@ -122,7 +179,6 @@ export default function ResultsCard({ result, inputs, photo, lang }) {
           </ul>
         </div>
 
-        {/* Strengths */}
         <div className="card card-green card-half">
           <h4 className="card-subheading">🌱 {t('strengthsTitle')}</h4>
           <ul className="bullet-list">
@@ -138,7 +194,7 @@ export default function ResultsCard({ result, inputs, photo, lang }) {
         </div>
       </div>
 
-      {/* 4. Crop Recommendations & Seasonal Options */}
+      {/* 6. Context-Aware Crop Recommendations */}
       <div className="card card-clean">
         <h3 className="section-title">🌾 {t('cropSuitabilityTitle')}</h3>
         <div className="season-tabs">
@@ -163,11 +219,16 @@ export default function ResultsCard({ result, inputs, photo, lang }) {
             filteredCrops.map((c, i) => (
               <div key={i} className="crop-card-item">
                 <div className="crop-header-row">
-                  <span className="crop-name">{c.name}</span>
+                  <span className="crop-name">
+                    {c.isPreferred && '⭐ '}{c.name}
+                  </span>
                   <span className="crop-score">{c.suitability || 85}% {t('suitabilityEstimate')}</span>
                 </div>
                 {c.reasons && c.reasons.length > 0 && (
                   <p className="crop-reason-text">✓ {c.reasons.join(' • ')}</p>
+                )}
+                {c.considerations && c.considerations.length > 0 && (
+                  <p className="crop-caution-text">⚠️ {c.considerations.join(' • ')}</p>
                 )}
               </div>
             ))
@@ -175,7 +236,38 @@ export default function ResultsCard({ result, inputs, photo, lang }) {
         </div>
       </div>
 
-      {/* 5. Safe Farmer Action Plan */}
+      {/* 7. Crop Comparison Matrix (Phase 2) */}
+      {comparisonList.length > 1 && (
+        <div className="card card-clean">
+          <h3 className="section-title">⚖️ {t('cropComparisonTitle')}</h3>
+          <div className="comparison-card-grid">
+            {comparisonList.map((item, idx) => (
+              <div key={idx} className="comparison-card">
+                <div className="comp-card-top">
+                  <strong>{item.name}</strong>
+                  <span className="comp-score-tag">{item.overallScore} pts</span>
+                </div>
+                <div className="comp-metrics">
+                  <div className="comp-metric-item">
+                    <span>{t('cropSoilFit')}</span>
+                    <span className={`fit-pill ${FIT_CLASS[item.soilFit]}`}>{item.soilFit}</span>
+                  </div>
+                  <div className="comp-metric-item">
+                    <span>{t('cropSeasonFit')}</span>
+                    <span className={`fit-pill ${FIT_CLASS[item.seasonFit]}`}>{item.seasonFit}</span>
+                  </div>
+                  <div className="comp-metric-item">
+                    <span>{t('cropWaterFit')}</span>
+                    <span className={`fit-pill ${FIT_CLASS[item.waterFit]}`}>{item.waterFit}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 8. Safe Farmer Action Plan */}
       {result.farmerActionSummary && (
         <div className="card card-clean action-plan-card">
           <h3 className="section-title">🚜 {t('actionPlanTitle')}</h3>

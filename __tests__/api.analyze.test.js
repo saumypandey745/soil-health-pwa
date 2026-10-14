@@ -113,4 +113,59 @@ describe('/api/analyze endpoint', () => {
     expect(data).toHaveProperty('deficiencies');
     expect(data).toHaveProperty('recommendedCrops');
   });
+
+  test('POST with context returns 200 with farmContext and cropComparison', async () => {
+    const { req, res } = createMocks({
+      method: 'POST',
+      body: {
+        n: 300,
+        p: 20,
+        k: 150,
+        ph: 6.5,
+        context: {
+          season: 'kharif',
+          waterAvailability: 'rainfed',
+          preferredCrop: 'Millets',
+        },
+      },
+    });
+
+    await handler(req, res);
+
+    expect(res._getStatusCode()).toBe(200);
+    const data = JSON.parse(res._getData());
+    expect(data).toHaveProperty('farmContext');
+    expect(data.farmContext.season).toBe('kharif');
+    expect(data.farmContext.waterAvailability).toBe('rainfed');
+    expect(data.farmContext.preferredCrop).toBe('Millets');
+    expect(data).toHaveProperty('cropComparison');
+    expect(Array.isArray(data.cropComparison)).toBe(true);
+  });
+
+  test('stringified JSON body is parsed and returns 200', async () => {
+    const { req, res } = createMocks({
+      method: 'POST',
+      body: JSON.stringify({ n: 300, p: 20, k: 150, ph: 6.5 }),
+    });
+
+    await handler(req, res);
+
+    expect(res._getStatusCode()).toBe(200);
+    const data = JSON.parse(res._getData());
+    expect(data).toHaveProperty('score');
+  });
+
+  test('malformed string body returns 400', async () => {
+    const { req, res } = createMocks({
+      method: 'POST',
+      body: '{ malformed json',
+    });
+
+    await handler(req, res);
+
+    expect(res._getStatusCode()).toBe(400);
+    const data = JSON.parse(res._getData());
+    expect(data.error).toBe('Invalid JSON body');
+  });
 });
+
