@@ -1,0 +1,106 @@
+# Milestone 4 Backend Test Documentation
+
+This document describes the automated test suite for the Soil Health PWA backend logic and API routes.
+
+---
+
+## 1. Overview & What is Tested
+
+The backend test suite covers 3 key areas across 32 individual unit and integration tests:
+
+1. **`lib/soilLogic.js` (`__tests__/soilLogic.test.js`)**:
+   - Pure function agronomic logic (`analyzeSoil`).
+   - Boundary value testing (healthy, moderate deficiency, severe deficiency at <60% threshold, excess nitrogen).
+   - Soil pH extremes (acidic and alkaline).
+   - Fallback crop compatibility logic (millets, pulses) and recommendation bounds (2–5 crops).
+   - Edge cases (all zeros, negative inputs, out-of-bound ranges) ensuring resilience and score containment (0–100).
+
+2. **`pages/api/analyze.js` (`__tests__/api.analyze.test.js`)**:
+   - HTTP method validation (POST allowed; GET/PUT rejected with 405).
+   - Request body validation (empty body, missing fields, non-numeric values returning 400).
+   - Type coercion (numeric string inputs coerced cleanly to numbers).
+   - Extreme large values handling returning valid 200 responses.
+
+3. **`pages/api/tts.js` (`__tests__/api.tts.test.js`)**:
+   - Method enforcement (POST allowed; GET rejected with 405).
+   - Environment variable validation (`SARVAM_API_KEY` presence check returning 400 if unconfigured).
+   - Request payload validation (missing/empty text, unsupported language codes returning 400).
+   - Text truncation (inputs longer than 2,500 characters safely sliced).
+   - Upstream API communication (contract verification against `https://api.sarvam.ai/text-to-speech` with `api-subscription-key`, `model: "bulbul:v3"`, `speaker: "shubh"`, and correct BCP-47 locale tags `en-IN`, `hi-IN`, `kn-IN`).
+   - Error masking and fault tolerance (upstream 5xx/4xx mapped to 502 without leaking keys or raw error bodies; network timeouts and exceptions mapped to 500).
+   - Binary response encoding (base64 audio payload decoded into `audio/wav` Buffer with status 200).
+
+> **Note on Sarvam AI Mocking**: In all test suites, Sarvam AI network calls are completely mocked using `global.fetch` mocks. **No real API key or internet access is required to run the test suite.**
+
+---
+
+## 2. How to Run the Tests
+
+To execute the test suite, run:
+
+```bash
+npm test
+```
+
+For verbose output with individual test names:
+
+```bash
+npx jest --verbose
+```
+
+For coverage report:
+
+```bash
+npx jest --coverage
+```
+
+---
+
+## 3. Test Cases & Expected Results
+
+### Suite 1: `__tests__/soilLogic.test.js`
+
+| # | Test Case Description | Input | Expected Result |
+|---|------------------------|-------|-----------------|
+| 1 | Healthy case | `{ n: 350, p: 18, k: 200, ph: 6.8 }` | Score 100, overall `'healthy'`, 0 deficiencies, recommended crops returned |
+| 2 | Severe N deficiency (<60% threshold) | `{ n: 100, p: 18, k: 200, ph: 6.8 }` | Deficiencies contain `{ nutrient: 'Nitrogen (N)', status: 'severe' }` |
+| 3 | Severe P deficiency (<60% threshold) | `{ n: 350, p: 4, k: 200, ph: 6.8 }` | Deficiencies contain `{ nutrient: 'Phosphorus (P)', status: 'severe' }` |
+| 4 | Severe K deficiency (<60% threshold) | `{ n: 350, p: 18, k: 50, ph: 6.8 }` | Deficiencies contain `{ nutrient: 'Potassium (K)', status: 'severe' }` |
+| 5 | Moderate deficiency for single low nutrient | `{ n: 200, p: 18, k: 200, ph: 6.8 }` | Deficiencies contain `{ nutrient: 'Nitrogen (N)', status: 'moderate' }`, score 90 |
+| 6 | Excess nitrogen flagged moderate | `{ n: 600, p: 18, k: 200, ph: 6.8 }` | Deficiencies contain `{ nutrient: 'Nitrogen (N)', status: 'moderate' }` |
+| 7 | pH too acidic | `{ n: 350, p: 18, k: 200, ph: 5.0 }` | Deficiencies contain `{ nutrient: 'pH balance', status: 'moderate' }` |
+| 8 | pH too alkaline | `{ n: 350, p: 18, k: 200, ph: 8.5 }` | Deficiencies contain `{ nutrient: 'pH balance', status: 'moderate' }` |
+| 9 | Boundary exactly at low threshold | `{ n: 280, p: 10, k: 120, ph: 6.0 }` | Score 100, overall `'healthy'`, 0 deficiencies |
+| 10 | Just below threshold | `{ n: 279, p: 10, k: 120, ph: 6.0 }` | Deficiencies contain `{ nutrient: 'Nitrogen (N)', status: 'moderate' }` |
+| 11 | Below 60% of threshold | `{ n: 167, p: 10, k: 120, ph: 6.0 }` | Deficiencies contain `{ nutrient: 'Nitrogen (N)', status: 'severe' }` |
+| 12 | All-zero input | `{ n: 0, p: 0, k: 0, ph: 0 }` | Does not throw, score 25, overall `'severe'`, 4 severe deficiencies |
+| 13 | Fallback crops when nothing matches | `{ n: 0, p: 0, k: 0, ph: 0 }` | Recommended crops equal `['Millets', 'Pulses (Dal)']` |
+| 14 | Strong profile returns 2 to 5 crops | `{ n: 350, p: 22, k: 220, ph: 6.5 }` | Recommended crops count is between 2 and 5 |
+| 15 | Score bounded within 0–100 | Range of extreme values | Score is >= 0 and <= 100 for all inputs |
+| 16 | Negative inputs do not throw | `{ n: -10, p: -5, k: -20, ph: -1 }` | Does not throw; returns valid result object |
+
+### Suite 2: `__tests__/api.analyze.test.js`
+
+| # | Test Case Description | Request | Expected Result |
+|---|------------------------|---------|-----------------|
+| 1 | Valid POST analysis | `POST /api/analyze` with `{ n: 300, p: 20, k: 150, ph: 6.5 }` | Status 200 with `score`, `overall`, `deficiencies`, `recommendedCrops` |
+| 2 | Reject GET | `GET /api/analyze` | Status 405 Method Not Allowed |
+| 3 | Reject PUT | `PUT /api/analyze` | Status 405 Method Not Allowed |
+| 4 | Missing required field | `POST /api/analyze` with missing `ph` | Status 400 with `{ error: 'Invalid NPK/pH values' }` |
+| 5 | Non-numeric string | `POST /api/analyze` with `{ n: 'abc', ... }` | Status 400 with `{ error: 'Invalid NPK/pH values' }` |
+| 6 | Empty body | `POST /api/analyze` with `{}` | Status 400 with `{ error: 'Invalid NPK/pH values' }` |
+| 7 | Coerce numeric strings | `POST /api/analyze` with `{ n: '300', p: '20', ... }` | Status 200, parsed as numbers, valid analysis returned |
+| 8 | Extreme large values | `POST /api/analyze` with large values | Status 200 with valid analysis returned |
+
+### Suite 3: `__tests__/api.tts.test.js`
+
+| # | Test Case Description | Request / Mock State | Expected Result |
+|---|------------------------|----------------------|-----------------|
+| 1 | Missing `SARVAM_API_KEY` | `SARVAM_API_KEY` unset | Status 400 with `{ error: 'SARVAM_API_KEY not configured' }`, fetch not called |
+| 2 | Reject GET | `GET /api/tts` | Status 405 Method Not Allowed, fetch not called |
+| 3 | Missing/empty text | `POST /api/tts` with empty text `""` | Status 400 with `{ error: 'Missing or empty text' }`, fetch not called |
+| 4 | Unsupported language | `POST /api/tts` with `lang: "fr"` | Status 400 with `{ error: 'Unsupported language' }`, fetch not called |
+| 5 | Upstream non-OK | Mock upstream response `ok: false` | Status 502 with `{ error: 'Sarvam AI request failed' }` (no key/upstream body leaked) |
+| 6 | Network error / rejection | Mock fetch throws error | Status 500 with `{ error: 'TTS generation failed' }` |
+| 7 | Successful TTS generation | Mock 200 with base64 audio | Status 200, `Content-Type: audio/wav`, decoded bytes returned; fetch called with `https://api.sarvam.ai/text-to-speech`, header `'api-subscription-key'`, body containing `text`, `language_code: 'hi-IN'`, `model: 'bulbul:v3'`, `speaker: 'shubh'` |
+| 8 | Truncation > 2500 characters | Payload text of 3,600 characters | Status 200, fetch called with payload text truncated to exactly 2,500 characters |
