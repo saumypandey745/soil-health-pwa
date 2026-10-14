@@ -3,6 +3,8 @@ import { useTranslation } from 'next-i18next';
 import { speakText } from '../lib/sarvam';
 import { generateSoilReport } from '../lib/pdfReport';
 import { calculateSoilTrend } from '../lib/historyLogic';
+import CropDecisionAssistant from './CropDecisionAssistant';
+import FarmerAssistant from './FarmerAssistant';
 
 const CARD_CLASS = { healthy: 'card-green', moderate: 'card-yellow', severe: 'card-red' };
 const STATUS_KEY = { healthy: 'healthy', moderate: 'moderateDeficiency', severe: 'severeDeficiency' };
@@ -15,15 +17,55 @@ export default function ResultsCard({ result, inputs, photo, lang, previousRecor
 
   const trend = calculateSoilTrend({ result, inputs }, previousRecord);
 
-  function handleListen() {
-    const gradeText = result.soilClassification?.healthGrade ? `, ${t('healthGrade')} ${result.soilClassification.healthGrade}` : '';
-    const limiting = result.soilClassification?.limitingFactor && result.soilClassification.limitingFactor !== 'None'
-      ? `${t('limitingFactor')}: ${result.soilClassification.limitingFactor}. `
-      : '';
-    const topCrop = result.cropRecommendations?.[0]?.name ? `${t('recommendedCrops')}: ${result.cropRecommendations[0].name}. ` : '';
-    const urgentAdvice = result.farmerActionSummary?.urgent ? `${result.farmerActionSummary.urgent}. ` : '';
+  function getLocalizedCrop(name) {
+    return t(`crop_${name}`, name);
+  }
 
-    const summary = `${t('soilHealthScore')}: ${result.score} out of 100 (${t(STATUS_KEY[result.overall])}${gradeText}). ${limiting}${topCrop}${urgentAdvice}`;
+  function getLocalizedFit(fit) {
+    if (!fit) return 'N/A';
+    if (fit === 'High') return t('fit_High', 'High');
+    if (fit === 'Moderate' || fit === 'Medium') return t('fit_Moderate', 'Moderate');
+    if (fit === 'Low') return t('fit_Low', 'Low');
+    return fit;
+  }
+
+  function handleListen() {
+    const grade = result.soilClassification?.healthGrade;
+    const limiting = result.soilClassification?.limitingFactor;
+    const topCrop = result.cropRecommendations?.[0]?.name;
+    const urgentAdvice = result.farmerActionSummary?.urgent;
+
+    let summary = '';
+    if (lang === 'hi') {
+      summary = `आपकी मिट्टी का स्वास्थ्य स्कोर 100 में से ${result.score} है, स्थिति ${t(STATUS_KEY[result.overall])}${grade ? `, ग्रेड ${grade}` : ''}। `;
+      if (limiting && limiting !== 'None') {
+        summary += `मुख्य समस्या ${limiting} की कमी है। `;
+      }
+      if (topCrop) {
+        summary += `सबसे उपयुक्त फसल ${getLocalizedCrop(topCrop)} है। `;
+      }
+      if (urgentAdvice) {
+        summary += `सलाह: ${urgentAdvice}`;
+      }
+    } else if (lang === 'kn') {
+      summary = `ನಿಮ್ಮ ಮಣ್ಣಿನ ಆರೋಗ್ಯ ಅಂಕ 100 ರಲ್ಲಿ ${result.score}, ಸ್ಥಿತಿ ${t(STATUS_KEY[result.overall])}${grade ? `, ಗ್ರೇಡ್ ${grade}` : ''}. `;
+      if (limiting && limiting !== 'None') {
+        summary += `ಮುಖ್ಯ ಸೀಮಿತಗೊಳಿಸುವ ಅಂಶ ${limiting}. `;
+      }
+      if (topCrop) {
+        summary += `ಶಿಫಾರಸು ಮಾಡಿದ ಬೆಳೆ ${getLocalizedCrop(topCrop)}. `;
+      }
+      if (urgentAdvice) {
+        summary += `ಕ್ರಮ: ${urgentAdvice}`;
+      }
+    } else {
+      const gradeText = grade ? `, ${t('healthGrade')} ${grade}` : '';
+      const limitingText = limiting && limiting !== 'None' ? `${t('limitingFactor')}: ${limiting}. ` : '';
+      const topCropText = topCrop ? `${t('recommendedCrops')}: ${topCrop}. ` : '';
+      const urgentText = urgentAdvice ? `${urgentAdvice}. ` : '';
+      summary = `${t('soilHealthScore')}: ${result.score} out of 100 (${t(STATUS_KEY[result.overall])}${gradeText}). ${limitingText}${topCropText}${urgentText}`;
+    }
+
     speakText(summary, lang);
   }
 
@@ -87,7 +129,7 @@ export default function ResultsCard({ result, inputs, photo, lang, previousRecor
         )}
       </div>
 
-      {/* 2. Farm Context Summary (Phase 2) */}
+      {/* 2. Farm Context Summary */}
       {farmContext.hasContext && (
         <div className="card card-clean context-badge-card">
           <h4 className="card-subheading">🏡 {t('farmContextSummary')}</h4>
@@ -105,16 +147,16 @@ export default function ResultsCard({ result, inputs, photo, lang, previousRecor
               <span className="context-chip">📍 {farmContext.location.district}{farmContext.location.state ? `, ${farmContext.location.state}` : ''}</span>
             )}
             {farmContext.preferredCrop && (
-              <span className="context-chip">⭐ {t('preferredCrop')}: {farmContext.preferredCrop}</span>
+              <span className="context-chip">⭐ {t('preferredCrop')}: {getLocalizedCrop(farmContext.preferredCrop)}</span>
             )}
             {farmContext.previousCrop && (
-              <span className="context-chip">🔄 {t('previousCrop')}: {farmContext.previousCrop}</span>
+              <span className="context-chip">🔄 {t('previousCrop')}: {getLocalizedCrop(farmContext.previousCrop)}</span>
             )}
           </div>
         </div>
       )}
 
-      {/* 3. Soil Health Progress Trend (Phase 2) */}
+      {/* 3. Soil Health Progress Trend */}
       {trend.hasComparison && (
         <div className="card card-clean trend-card">
           <div className="trend-header-row">
@@ -220,7 +262,7 @@ export default function ResultsCard({ result, inputs, photo, lang, previousRecor
               <div key={i} className="crop-card-item">
                 <div className="crop-header-row">
                   <span className="crop-name">
-                    {c.isPreferred && '⭐ '}{c.name}
+                    {c.isPreferred && '⭐ '}{getLocalizedCrop(c.name)}
                   </span>
                   <span className="crop-score">{c.suitability || 85}% {t('suitabilityEstimate')}</span>
                 </div>
@@ -236,29 +278,29 @@ export default function ResultsCard({ result, inputs, photo, lang, previousRecor
         </div>
       </div>
 
-      {/* 7. Crop Comparison Matrix (Phase 2) */}
+      {/* 7. Crop Comparison Matrix */}
       {comparisonList.length > 1 && (
         <div className="card card-clean">
-          <h3 className="section-title">⚖️ {t('cropComparisonTitle')}</h3>
+          <h3 className="section-title">📊 {t('cropComparisonTitle')}</h3>
           <div className="comparison-card-grid">
             {comparisonList.map((item, idx) => (
               <div key={idx} className="comparison-card">
                 <div className="comp-card-top">
-                  <strong>{item.name}</strong>
-                  <span className="comp-score-tag">{item.overallScore} pts</span>
+                  <strong>{getLocalizedCrop(item.name)}</strong>
+                  <span className="comp-score-tag">{item.overallScore}%</span>
                 </div>
                 <div className="comp-metrics">
                   <div className="comp-metric-item">
                     <span>{t('cropSoilFit')}</span>
-                    <span className={`fit-pill ${FIT_CLASS[item.soilFit]}`}>{item.soilFit}</span>
+                    <span className={`fit-pill ${FIT_CLASS[item.soilFit]}`}>{getLocalizedFit(item.soilFit)}</span>
                   </div>
                   <div className="comp-metric-item">
                     <span>{t('cropSeasonFit')}</span>
-                    <span className={`fit-pill ${FIT_CLASS[item.seasonFit]}`}>{item.seasonFit}</span>
+                    <span className={`fit-pill ${FIT_CLASS[item.seasonFit]}`}>{getLocalizedFit(item.seasonFit)}</span>
                   </div>
                   <div className="comp-metric-item">
                     <span>{t('cropWaterFit')}</span>
-                    <span className={`fit-pill ${FIT_CLASS[item.waterFit]}`}>{item.waterFit}</span>
+                    <span className={`fit-pill ${FIT_CLASS[item.waterFit]}`}>{getLocalizedFit(item.waterFit)}</span>
                   </div>
                 </div>
               </div>
@@ -267,7 +309,15 @@ export default function ResultsCard({ result, inputs, photo, lang, previousRecor
         </div>
       )}
 
-      {/* 8. Safe Farmer Action Plan */}
+      {/* 8. Interactive Crop Decision Assistant (Phase 3B) */}
+      <CropDecisionAssistant
+        cropRecommendations={result.cropRecommendations || []}
+        farmContext={farmContext}
+        soilInputs={inputs}
+        soilScore={result.score}
+      />
+
+      {/* 9. Safe Farmer Action Plan */}
       {result.farmerActionSummary && (
         <div className="card card-clean action-plan-card">
           <h3 className="section-title">🚜 {t('actionPlanTitle')}</h3>
@@ -286,7 +336,15 @@ export default function ResultsCard({ result, inputs, photo, lang, previousRecor
         </div>
       )}
 
-      {/* Action Buttons */}
+      {/* 10. AI Farmer Assistant (Phase 3C) */}
+      <FarmerAssistant
+        result={result}
+        inputs={inputs}
+        farmContext={farmContext}
+        lang={lang}
+      />
+
+      {/* 11. Action Buttons */}
       <button className="btn btn-secondary" onClick={handleListen}>
         🔊 {t('listenResults')}
       </button>
@@ -296,3 +354,4 @@ export default function ResultsCard({ result, inputs, photo, lang, previousRecor
     </div>
   );
 }
+

@@ -89,14 +89,14 @@ export default function FarmContextForm({ onSubmit, onSkip, onBack, initialValue
           onChange={(e) => setPreferredCrop(e.target.value)}
         >
           <option value="">-- {t('selectOptional')} --</option>
-          <option value="Wheat">Wheat</option>
-          <option value="Rice">Rice</option>
-          <option value="Maize">Maize</option>
-          <option value="Sugarcane">Sugarcane</option>
-          <option value="Cotton">Cotton</option>
-          <option value="Groundnut">Groundnut</option>
-          <option value="Millets">Millets</option>
-          <option value="Pulses (Dal)">Pulses (Dal)</option>
+          <option value="Wheat">{t('crop_Wheat', 'Wheat')}</option>
+          <option value="Rice">{t('crop_Rice', 'Rice')}</option>
+          <option value="Maize">{t('crop_Maize', 'Maize')}</option>
+          <option value="Sugarcane">{t('crop_Sugarcane', 'Sugarcane')}</option>
+          <option value="Cotton">{t('crop_Cotton', 'Cotton')}</option>
+          <option value="Groundnut">{t('crop_Groundnut', 'Groundnut')}</option>
+          <option value="Millets">{t('crop_Millets', 'Millets')}</option>
+          <option value="Pulses (Dal)">{t('crop_Pulses (Dal)', 'Pulses (Dal)')}</option>
         </select>
       </div>
 

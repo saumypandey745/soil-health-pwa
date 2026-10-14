@@ -182,15 +182,31 @@ export default function Home() {
         </div>
       )}
 
-      {/* Step 1: Soil Photo Capture */}
+      {/* Step 1: Soil Photo Capture (Optional with Direct Entry) */}
       {step === 'capture' && !showHistory && (
         <>
           <PhotoCapture onCapture={handlePhoto} />
           <button className="btn btn-primary" disabled={!photo} onClick={() => setStep('form')}>
-            {t('next')}
+            📷 {photo ? t('continueWithPhoto') : t('capturePhoto')}
           </button>
+          <div className="direct-entry-divider">
+            <span>{t('or')}</span>
+          </div>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => {
+              setPhoto(null);
+              setStep('form');
+            }}
+          >
+            📝 {t('enterValuesDirectly')}
+          </button>
+          <p className="direct-entry-hint">
+            ℹ️ {t('optionalPhotoHint')}
+          </p>
           {history.length > 0 && (
-            <button className="btn btn-secondary" onClick={() => setShowHistory(true)}>
+            <button className="btn btn-secondary btn-sm" onClick={() => setShowHistory(true)}>
               📋 {t('viewHistory')} ({history.length})
             </button>
           )}
