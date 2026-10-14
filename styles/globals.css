@@ -1,55 +1,509 @@
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, Roboto, sans-serif;
-  background: #f0fdf4;
-  color: #14532d;
+  font-family: system-ui, -apple-system, Roboto, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
 }
+
 .container {
   max-width: 480px;
   margin: 0 auto;
   padding: 16px;
   min-height: 100vh;
 }
-.btn {
-  display: block;
-  width: 100%;
-  padding: 16px;
-  font-size: 18px;
+
+/* Header & Lang Switcher */
+.app-header {
+  margin-bottom: 16px;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.logo-badge {
+  font-size: 13px;
+  font-weight: 700;
+  background: #dcfce7;
+  color: #166534;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid #86efac;
+}
+
+.main-title {
+  margin: 4px 0 0 0;
+  font-size: 24px;
+  color: #166534;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.lang-switch {
+  display: flex;
+  gap: 6px;
+}
+
+.lang-switch button {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  background: white;
+  font-size: 13px;
   font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.lang-switch button.active-lang {
+  background: #166534;
+  color: white;
+  border-color: #166534;
+}
+
+/* Buttons */
+.btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 700;
   border-radius: 12px;
   border: none;
   margin-top: 12px;
   cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.1s ease, background-color 0.2s ease;
 }
-.btn-primary { background: #166534; color: white; }
-.btn-secondary { background: #e5e7eb; color: #111827; }
-.input-group { margin-bottom: 14px; }
-.input-group label { display: block; margin-bottom: 6px; font-size: 16px; font-weight: 600; }
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: #166534;
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(22, 101, 52, 0.2);
+}
+
+.btn-secondary {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.btn-sm {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+/* Inputs */
+.input-group {
+  margin-bottom: 14px;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
 .input-group input, select {
   width: 100%;
-  padding: 12px;
+  padding: 12px 14px;
   font-size: 16px;
   border-radius: 10px;
-  border: 1px solid #86efac;
+  border: 1.5px solid #cbd5e1;
+  background: white;
+  color: #0f172a;
 }
+
+.input-group input:focus {
+  outline: none;
+  border-color: #166534;
+  box-shadow: 0 0 0 3px rgba(22, 101, 52, 0.15);
+}
+
+/* Cards */
 .card {
   padding: 16px;
   border-radius: 14px;
-  margin-bottom: 12px;
-  font-size: 16px;
+  margin-bottom: 14px;
+  font-size: 15px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
-.card-green { background: #dcfce7; border: 2px solid #16a34a; }
-.card-yellow { background: #fef9c3; border: 2px solid #ca8a04; }
-.card-red { background: #fee2e2; border: 2px solid #dc2626; }
-.lang-switch { display: flex; gap: 8px; justify-content: flex-end; margin-bottom: 8px; }
-.lang-switch button {
-  padding: 6px 12px;
-  border-radius: 8px;
-  border: 1px solid #166534;
+
+.card-clean {
   background: white;
-  font-size: 14px;
+  border: 1.5px solid #e2e8f0;
 }
+
+.card-green {
+  background: #f0fdf4;
+  border: 2px solid #22c55e;
+}
+
+.card-yellow {
+  background: #fefce8;
+  border: 2px solid #eab308;
+}
+
+.card-red {
+  background: #fef2f2;
+  border: 2px solid #ef4444;
+}
+
+.section-title {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.card-subheading {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Score Banner */
+.score-banner {
+  padding: 18px;
+}
+
+.score-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.score-subtitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.score-number {
+  font-size: 42px;
+  font-weight: 900;
+  line-height: 1.1;
+  color: #0f172a;
+}
+
+.score-total {
+  font-size: 20px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.score-status-tag {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.grade-badge-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.grade-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.grade-circle {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 900;
+  color: white;
+}
+
+.grade-a { background: #16a34a; }
+.grade-b { background: #059669; }
+.grade-c { background: #d97706; }
+.grade-d { background: #ea580c; }
+.grade-e { background: #dc2626; }
+
+.soil-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.15);
+}
+
+.meta-item {
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+}
+
+.meta-label {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.text-alert { color: #dc2626; }
+.text-good { color: #166534; }
+.text-severe { color: #b91c1c; }
+
+/* Nutrient Dashboard */
+.nutrient-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.nutrient-box {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.nutrient-box.status-healthy { border-color: #86efac; background: #f0fdf4; }
+.nutrient-box.status-moderate { border-color: #fde047; background: #fefce8; }
+.nutrient-box.status-severe { border-color: #fca5a5; background: #fef2f2; }
+
+.nutrient-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.nutrient-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.status-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 12px;
+  text-transform: capitalize;
+}
+
+.pill-healthy { background: #bbf7d0; color: #166534; }
+.pill-moderate { background: #fef08a; color: #854d0e; }
+.pill-severe { background: #fecaca; color: #991b1b; }
+
+.nutrient-val-row {
+  margin: 4px 0;
+}
+
+.nutrient-val {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.nutrient-optimal {
+  font-size: 10px;
+  color: #64748b;
+}
+
+/* Dual Column Row */
+.dual-card-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.bullet-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+.bullet-list li {
+  margin-bottom: 4px;
+}
+
+/* Crop Section & Tabs */
+.season-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.tab-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 20px;
+  border: 1px solid #cbd5e1;
+  background: #f1f5f9;
+  color: #475569;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tab-btn.tab-active {
+  background: #166534;
+  color: white;
+  border-color: #166534;
+}
+
+.crop-card-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 8px;
+}
+
+.crop-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.crop-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #166534;
+}
+
+.crop-score {
+  font-size: 12px;
+  font-weight: 700;
+  color: #059669;
+  background: #ecfdf5;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.crop-reason-text {
+  margin: 4px 0 0 0;
+  font-size: 12px;
+  color: #475569;
+}
+
+/* Safe Action Plan */
+.action-plan-card {
+  border-left: 4px solid #166534;
+}
+
+.action-row {
+  margin-bottom: 10px;
+}
+
+.action-tag {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: 4px;
+}
+
+.action-tag.urgent { background: #fee2e2; color: #991b1b; }
+.action-tag.longterm { background: #e0e7ff; color: #3730a3; }
+
+.action-text {
+  margin: 0;
+  font-size: 13px;
+  color: #334155;
+  line-height: 1.4;
+}
+
+.disclaimer-box {
+  margin-top: 12px;
+  padding: 8px 10px;
+  background: #fffbeb;
+  border-radius: 8px;
+  border: 1px solid #fde68a;
+  font-size: 11px;
+  color: #92400e;
+  line-height: 1.3;
+}
+
+/* History */
+.history-modal {
+  margin-bottom: 16px;
+  border: 1.5px solid #cbd5e1;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.history-header h3 { margin: 0; font-size: 16px; }
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-item {
+  padding: 10px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+}
+
+.history-item-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.history-date { font-size: 12px; font-weight: 600; color: #64748b; }
+.history-item-details { font-size: 12px; color: #334155; }
+
+/* Camera Viewfinder */
 .camera-box {
   width: 100%;
   aspect-ratio: 3/4;
@@ -59,4 +513,9 @@ body {
   position: relative;
   margin-bottom: 12px;
 }
-.camera-box video, .camera-box img { width: 100%; height: 100%; object-fit: cover; }
+
+.camera-box video, .camera-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

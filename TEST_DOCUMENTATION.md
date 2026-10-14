@@ -1,27 +1,38 @@
-# Milestone 4 Backend Test Documentation
+# Backend & Soil Intelligence Test Documentation
 
-This document describes the automated test suite for the Soil Health PWA backend logic and API routes.
+This document describes the automated test suite for the Soil Health PWA backend logic, API routes, and Phase 1 Advanced Soil Intelligence.
 
 ---
 
 ## 1. Overview & What is Tested
 
-The backend test suite covers 3 key areas across 32 individual unit and integration tests:
+The test suite covers 4 key areas across **52 individual unit and integration tests**:
 
-1. **`lib/soilLogic.js` (`__tests__/soilLogic.test.js`)**:
-   - Pure function agronomic logic (`analyzeSoil`).
+1. **`lib/soilLogic.js` (`__tests__/soilLogic.test.js`) — 16 Tests**:
+   - Baseline agronomic calculation logic (`analyzeSoil`).
    - Boundary value testing (healthy, moderate deficiency, severe deficiency at <60% threshold, excess nitrogen).
    - Soil pH extremes (acidic and alkaline).
    - Fallback crop compatibility logic (millets, pulses) and recommendation bounds (2–5 crops).
    - Edge cases (all zeros, negative inputs, out-of-bound ranges) ensuring resilience and score containment (0–100).
 
-2. **`pages/api/analyze.js` (`__tests__/api.analyze.test.js`)**:
+2. **`lib/soilLogic.js` (`__tests__/soilIntelligence.test.js`) — 20 Tests**:
+   - Granular pH classification (`classifyPh`: Strongly Acidic, Acidic, Slightly Acidic, Neutral, Slightly Alkaline, Moderately Alkaline, Strongly Alkaline).
+   - Soil Health Grade mapping (`calculateHealthGrade`: A, B, C, D, E).
+   - Deterministic Limiting Factor detection (`determineLimitingFactor`: severity-based ranking, relative deficit ratios, and deterministic tie-breaker).
+   - Normalized nutrient attributes (`current`, `status`, `severity`, `optimalRange`, `unit`, `label`).
+   - Safe Action Model compliance (actionPlan has valid types, priorities, and disclaimers without hardcoded universal prescriptions).
+   - Crop recommendations metadata (rule-based suitability percentages, considerations, and reasons).
+   - Seasonal crop segmentation (`kharif`, `rabi`, `zaid`).
+   - Positive soil strengths detection for healthy parameters.
+   - Structured farmer action summaries (`priority`, `urgent`, `longTerm`).
+
+3. **`pages/api/analyze.js` (`__tests__/api.analyze.test.js`) — 8 Tests**:
    - HTTP method validation (POST allowed; GET/PUT rejected with 405).
    - Request body validation (empty body, missing fields, non-numeric values returning 400).
    - Type coercion (numeric string inputs coerced cleanly to numbers).
    - Extreme large values handling returning valid 200 responses.
 
-3. **`pages/api/tts.js` (`__tests__/api.tts.test.js`)**:
+4. **`pages/api/tts.js` (`__tests__/api.tts.test.js`) — 8 Tests**:
    - Method enforcement (POST allowed; GET rejected with 405).
    - Environment variable validation (`SARVAM_API_KEY` presence check returning 400 if unconfigured).
    - Request payload validation (missing/empty text, unsupported language codes returning 400).
@@ -79,7 +90,32 @@ npx jest --coverage
 | 15 | Score bounded within 0–100 | Range of extreme values | Score is >= 0 and <= 100 for all inputs |
 | 16 | Negative inputs do not throw | `{ n: -10, p: -5, k: -20, ph: -1 }` | Does not throw; returns valid result object |
 
-### Suite 2: `__tests__/api.analyze.test.js`
+### Suite 2: `__tests__/soilIntelligence.test.js` (Phase 1 Intelligence)
+
+| # | Test Case Description | Input / Function | Expected Result |
+|---|------------------------|------------------|-----------------|
+| 1 | pH < 5.0 | `classifyPh(4.5)` | Returns `'Strongly Acidic'` |
+| 2 | 5.0 <= pH < 6.0 | `classifyPh(5.5)` | Returns `'Acidic'` |
+| 3 | 6.0 <= pH < 6.5 | `classifyPh(6.2)` | Returns `'Slightly Acidic'` |
+| 4 | 6.5 <= pH <= 7.5 | `classifyPh(7.0)` | Returns `'Neutral'` |
+| 5 | 7.5 < pH <= 8.0 | `classifyPh(7.8)` | Returns `'Slightly Alkaline'` |
+| 6 | 8.0 < pH <= 8.5 | `classifyPh(8.3)` | Returns `'Moderately Alkaline'` |
+| 7 | pH > 8.5 | `classifyPh(9.0)` | Returns `'Strongly Alkaline'` |
+| 8 | Grade calculation (A) | `calculateHealthGrade(95)` | Returns `'A'` |
+| 9 | Grade calculation (B) | `calculateHealthGrade(85)` | Returns `'B'` |
+| 10 | Grade calculation (C) | `calculateHealthGrade(75)` | Returns `'C'` |
+| 11 | Grade calculation (D) | `calculateHealthGrade(55)` | Returns `'D'` |
+| 12 | Grade calculation (E) | `calculateHealthGrade(30)` | Returns `'E'` |
+| 13 | Limiting factor (Healthy) | All parameters healthy | Returns `'None'` |
+| 14 | Limiting factor (N) | Sole severe N | Returns `'Nitrogen'` |
+| 15 | Limiting factor (P) | Sole severe P | Returns `'Phosphorus'` |
+| 16 | Limiting factor (K) | Sole severe K | Returns `'Potassium'` |
+| 17 | Limiting factor (Tie break) | All parameters zero | Deterministically selects `'Nitrogen'` via hierarchy |
+| 18 | Result Contract Integrity | `analyzeSoil()` execution | Exposes `nutrients`, `soilClassification`, `strengths`, `cropRecommendations`, `seasonalCrops`, `farmerActionSummary`, `actionPlan` |
+| 19 | Safe Action Model | `actionPlan` validation | Disclaimers present, zero hardcoded universal prescriptions (e.g. no "40-50 kg/acre Urea") |
+| 20 | Crop Suitability & Reasons | `cropRecommendations` | Rule-based percentage bounded 50–100 with clear suitability estimate disclaimers |
+
+### Suite 3: `__tests__/api.analyze.test.js`
 
 | # | Test Case Description | Request | Expected Result |
 |---|------------------------|---------|-----------------|
@@ -92,7 +128,7 @@ npx jest --coverage
 | 7 | Coerce numeric strings | `POST /api/analyze` with `{ n: '300', p: '20', ... }` | Status 200, parsed as numbers, valid analysis returned |
 | 8 | Extreme large values | `POST /api/analyze` with large values | Status 200 with valid analysis returned |
 
-### Suite 3: `__tests__/api.tts.test.js`
+### Suite 4: `__tests__/api.tts.test.js`
 
 | # | Test Case Description | Request / Mock State | Expected Result |
 |---|------------------------|----------------------|-----------------|
