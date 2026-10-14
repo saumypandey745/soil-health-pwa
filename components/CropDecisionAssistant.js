@@ -45,6 +45,22 @@ export default function CropDecisionAssistant({
     'N/A': 'fit-na',
   };
 
+  function handleSelectCropA(newA) {
+    setCropA(newA);
+    if (newA === cropB) {
+      const altB = ALL_CROPS.find((c) => c !== newA) || 'Maize';
+      setCropB(altB);
+    }
+  }
+
+  function handleSelectCropB(newB) {
+    setCropB(newB);
+    if (newB === cropA) {
+      const altA = ALL_CROPS.find((c) => c !== newB) || 'Wheat';
+      setCropA(altA);
+    }
+  }
+
   return (
     <div className="card card-clean crop-decision-box" aria-label="Crop Decision Assistant">
       <div className="form-header-box">
@@ -59,10 +75,10 @@ export default function CropDecisionAssistant({
           <select
             id="select-crop-a"
             value={cropA}
-            onChange={(e) => setCropA(e.target.value)}
+            onChange={(e) => handleSelectCropA(e.target.value)}
           >
             {ALL_CROPS.map((c) => (
-              <option key={`a-${c}`} value={c}>
+              <option key={`a-${c}`} value={c} disabled={c === cropB}>
                 {getLocalizedCropName(c)}
               </option>
             ))}
@@ -74,10 +90,10 @@ export default function CropDecisionAssistant({
           <select
             id="select-crop-b"
             value={cropB}
-            onChange={(e) => setCropB(e.target.value)}
+            onChange={(e) => handleSelectCropB(e.target.value)}
           >
             {ALL_CROPS.map((c) => (
-              <option key={`b-${c}`} value={c}>
+              <option key={`b-${c}`} value={c} disabled={c === cropA}>
                 {getLocalizedCropName(c)}
               </option>
             ))}

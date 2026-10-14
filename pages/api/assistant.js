@@ -35,8 +35,7 @@ export default async function handler(req, res) {
   // Check if an external LLM key is configured (e.g. GEMINI_API_KEY)
   const geminiApiKey = process.env.GEMINI_API_KEY;
   if (geminiApiKey) {
-    try {
-      const promptText = `You are a respectful, practical Indian agricultural expert assistant helping a smallholder farmer.
+    const promptText = `You are a respectful, practical Indian agricultural expert assistant helping a smallholder farmer.
 You only give advice based strictly on the provided soil test data and farm context:
 SOIL DATA: ${JSON.stringify(safeContext.soil || {})}
 FARM CONTEXT: ${JSON.stringify(safeContext.farm || {})}
@@ -50,28 +49,38 @@ SAFETY RULES:
 
 FARMER QUESTION: "${cleanMessage}"`;
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: promptText }] }],
-            generationConfig: { maxOutputTokens: 250, temperature: 0.2 },
-          }),
-        }
-      );
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+      }, 10000);
 
-      if (response.ok) {
-        const data = await response.json();
-        const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (text && typeof text === 'string') {
-          return res.status(200).json({ reply: text.trim(), provider: 'ai' });
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: promptText }] }],
+              generationConfig: { maxOutputTokens: 250, temperature: 0.2 },
+            }),
+            signal: controller.signal,
+          }
+        );
+
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const data = await response.json();
+          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (text && typeof text === 'string') {
+            return res.status(200).json({ reply: text.trim(), provider: 'ai' });
+          }
         }
+      } catch {
+        clearTimeout(timeoutId);
+        // Fall through to deterministic expert engine on upstream failure or timeout
       }
-    } catch {
-      // Fall through to deterministic expert engine on upstream failure
-    }
   }
 
   // Deterministic Agronomy Reasoning Engine (offline & default provider)
